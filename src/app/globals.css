@@ -4,6 +4,93 @@
 
 @custom-variant dark (&:is(.dark *));
 
+@theme {
+  --font-sans:
+    'Sf Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+  --text-display-3xl: 60px;
+  --text-display-3xl--line-height: 72px;
+  --text-display-2xl: 48px;
+  --text-display-2xl--line-height: 60px;
+  --text-display-2xl--letter-spacing: -0.02em;
+  --text-display-xl: 40px;
+  --text-display-xl--line-height: 48px;
+  --text-display-xl--letter-spacing: -0.02em;
+  --text-display-lg: 36px;
+  --text-display-lg--line-height: 44px;
+  --text-display-lg--letter-spacing: -0.02em;
+  --text-display-md: 32px;
+  --text-display-md--line-height: 40px;
+  --text-display-sm: 28px;
+  --text-display-sm--line-height: 38px;
+  --text-display-xs: 24px;
+  --text-display-xs--line-height: 36px;
+  --text-xl: 20px;
+  --text-xl--line-height: 34px;
+  --text-lg: 18px;
+  --text-lg--line-height: 32px;
+  --text-md: 16px;
+  --text-md--line-height: 30px;
+  --text-sm: 14px;
+  --text-sm--line-height: 28px;
+  --text-xs: 12px;
+  --text-xs--line-height: 24px;
+
+  --color-gray-25: #fdfdfd;
+  --color-gray-50: #fafafa;
+  --color-gray-100: #f5f5f5;
+  --color-gray-200: #e9eaeb;
+  --color-gray-300: #d5d7da;
+  --color-gray-400: #a4a7ae;
+  --color-gray-500: #717680;
+  --color-gray-600: #535862;
+  --color-gray-700: #414651;
+  --color-gray-800: #252b37;
+  --color-gray-900: #181d27;
+  --color-gray-950: #0a0d12;
+
+  --color-primary-100: #f6f9fe;
+  --color-primary-200: #7f51f9;
+  --color-primary-300: #6936f2;
+
+  --color-accent-red: #d9206e;
+  --color-accent-green: #079455;
+  --color-accent-yellow: #fdb022;
+
+  --color-white: #ffffff;
+  --color-black: #000000;
+
+  --radius-none: 0px;
+  --radius-xxs: 2px;
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 12px;
+  --radius-2xl: 16px;
+  --radius-3xl: 20px;
+  --radius-4xl: 24px;
+  --radius-full: 9999px;
+
+  --spacing-none: 0px;
+  --spacing-xxs: 2px;
+  --spacing-xs: 4px;
+  --spacing-sm: 6px;
+  --spacing-md: 8px;
+  --spacing-lg: 12px;
+  --spacing-xl: 16px;
+  --spacing-2xl: 20px;
+  --spacing-3xl: 24px;
+  --spacing-4xl: 32px;
+  --spacing-5xl: 40px;
+  --spacing-6xl: 48px;
+  --spacing-7xl: 64px;
+  --spacing-8xl: 80px;
+  --spacing-9xl: 96px;
+  --spacing-10xl: 128px;
+  --spacing-11xl: 140px;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
