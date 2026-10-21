@@ -12,6 +12,9 @@ import Link from 'next/link';
 import { registerSchema, RegisterInput } from '@/validations/schema';
 import Logo from '@/components/shared/Logo';
 import { Eye, EyeOff } from 'lucide-react';
+import { Alert } from '@/components/shared/Alert';
+import axios from 'axios';
+import { RegisterApiResponse } from '@/types';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -28,13 +31,24 @@ export default function RegisterPage() {
 
   const mutation = useMutation({
     mutationFn: authApi.register,
-    onSuccess: () => {
+    onSuccess: (response: RegisterApiResponse) => {
+      if (response?.success === false) {
+        throw new Error(response?.message || 'Registration failed');
+      }
       router.push('/login');
     },
   });
 
   const onSubmit = (data: RegisterInput) => {
-    mutation.mutate(data);
+    const payload = {
+      name: data.name,
+      username: data.username,
+      email: data.email,
+      phone: data.phone,
+      password: data.password,
+    };
+
+    mutation.mutate(payload);
   };
 
   return (
@@ -44,9 +58,15 @@ export default function RegisterPage() {
       <h1 className='text-display-xs font-bold text-center'>Register</h1>
 
       {mutation.isError && (
-        <div className='w-full mb-4 p-3 rounded-lg bg-red-500/10 border border-accent-red text-xs text-accent-red text-center'>
-          Registration failed. Please check your details and try again.
-        </div>
+        <Alert
+          type='error'
+          message={
+            axios.isAxiosError(mutation.error)
+              ? mutation.error.response?.data?.message
+              : (mutation.error as Error)?.message ||
+                'Registration failed. Please check your details and try again.'
+          }
+        />
       )}
 
       <form
@@ -84,8 +104,8 @@ export default function RegisterPage() {
           <Input
             type='email'
             placeholder='Enter your email'
-            error={!!errors.username}
-            {...register('username')}
+            error={!!errors.email}
+            {...register('email')}
           />
           {errors.email && (
             <p className='text-sm text-accent-red'>{errors.email.message}</p>
