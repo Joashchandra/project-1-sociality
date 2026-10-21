@@ -11,9 +11,18 @@ export interface LoginPayload {
   password: string;
 }
 
-export interface AuthResponse {
-  token: string;
-  user: User;
+export interface RegisterApiResponse {
+  success?: boolean;
+  message?: string;
+}
+
+export interface LoginApiResponse {
+  success: boolean;
+  message: string;
+  data: {
+    token: string;
+    user: User;
+  };
 }
 
 export interface User {
