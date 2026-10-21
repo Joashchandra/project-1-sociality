@@ -44,3 +44,44 @@ export interface User {
     saved?: number;
   };
 }
+
+export interface UserSearchResponse {
+  users: User[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+export interface Post {
+  id: number;
+  caption: string;
+  imageUrl: string;
+  createdAt: string;
+  author: User;
+  isLikedByMe?: boolean;
+  isSavedByMe?: boolean;
+  _count?: {
+    likes?: number;
+    comments?: number;
+  };
+}
+
+export interface PaginationParams {
+  page?: number;
+  limit?: number;
+}
+
+export interface SearchUsersParams extends PaginationParams {
+  q: string;
+}
+
+export interface PaginatedResponse<T> {
+  data: T[];
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
