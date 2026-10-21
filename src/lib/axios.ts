@@ -3,7 +3,7 @@ import axios from 'axios';
 export const api = axios.create({
   baseURL:
     process.env.NEXT_PUBLIC_API_BASE_URL ||
-    'https://be-social-media-api-production.up.railway.app/api-swagger/',
+    'https://be-social-media-api-production.up.railway.app/api/',
   headers: {
     'Content-Type': 'application/json',
   },
