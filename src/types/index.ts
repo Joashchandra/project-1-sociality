@@ -63,6 +63,8 @@ export interface Post {
   author: User;
   isLikedByMe?: boolean;
   isSavedByMe?: boolean;
+  likeCount?: number;
+  commentCount?: number;
   _count?: {
     likes?: number;
     comments?: number;
@@ -72,6 +74,18 @@ export interface Post {
 export interface CreatePostPayload {
   image: File;
   caption?: string;
+}
+
+export interface Comment {
+  id: number;
+  text: string;
+  createdAt: string;
+  user: User;
+  postId: number;
+}
+
+export interface CreateCommentPayload {
+  text: string;
 }
 
 export interface PaginationParams {
@@ -85,7 +99,7 @@ export interface SearchUsersParams extends PaginationParams {
 
 export interface PaginatedResponse<T> {
   data: {
-    posts: T[];
+    items: T[];
     pagination: {
       page: number;
       limit: number;
