@@ -13,6 +13,7 @@ import { useSelector } from 'react-redux';
 import { RootState } from '@/store';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import { useMyLikes, useMySaved } from '@/hooks/useMe';
 
 dayjs.extend(relativeTime);
 
@@ -31,13 +32,31 @@ export default function PostCard({ post }: PostCardProps) {
     typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
   const isLoggedIn = isAuthenticated || Boolean(token) || Boolean(storedToken);
 
-  const [isLiked, setIsLiked] = useState(post.isLikedByMe || false);
+  const { data: myLikesData } = useMyLikes({ page: 1, limit: 20 }, isLoggedIn);
+  const { data: mySavedData } = useMySaved({ page: 1, limit: 20 }, isLoggedIn);
+
+  const [likeOverride, setLikeOverride] = useState<boolean | null>(null);
+  const [saveOverride, setSaveOverride] = useState<boolean | null>(null);
+
+  const likesList = myLikesData?.data?.posts;
+  const isLikedInQuery = Array.isArray(likesList)
+    ? likesList.some((likedPost: { id: number }) => likedPost.id === post.id)
+    : (post.isLikedByMe ?? post.likedByMe ?? false);
+
+  const isLiked = likeOverride ?? isLikedInQuery;
+
+  const savedList = mySavedData?.data?.posts;
+  const isSavedInQuery = Array.isArray(savedList)
+    ? savedList.some((savedPost: { id: number }) => savedPost.id === post.id)
+    : (post.isSavedByMe ?? false);
+
+  const isSaved = saveOverride ?? isSavedInQuery;
 
   const initialLikeCount = post._count?.likes ?? post.likeCount ?? 0;
-  const [likeCount, setLikeCount] = useState(initialLikeCount);
+  const [likeCountDelta, setLikeCountDelta] = useState(0);
+  const likeCount = initialLikeCount + likeCountDelta;
 
   const commentCount = post._count?.comments ?? post.commentCount ?? 0;
-  const [isSaved, setIsSaved] = useState(post.isSavedByMe || false);
 
   const [isExpanded, setIsExpanded] = useState(false);
   const [isOverflowing, setIsOverflowing] = useState(false);
@@ -57,32 +76,39 @@ export default function PostCard({ post }: PostCardProps) {
   }, [isExpanded, post.caption]);
 
   const likeMutation = useMutation({
-    mutationFn: () =>
-      isLiked ? postsApi.unlikePost(post.id) : postsApi.likePost(post.id),
-    onMutate: () => {
-      setIsLiked(!isLiked);
-      setLikeCount((prev) => (isLiked ? prev - 1 : prev + 1));
+    mutationFn: (currentlyLiked: boolean) =>
+      currentlyLiked
+        ? postsApi.unlikePost(post.id)
+        : postsApi.likePost(post.id),
+    onMutate: (currentlyLiked) => {
+      setLikeOverride(!currentlyLiked);
+      setLikeCountDelta((prev) => (currentlyLiked ? prev - 1 : prev + 1));
     },
     onError: () => {
-      setIsLiked(isLiked);
-      setLikeCount(post._count?.likes ?? post.likeCount ?? 0);
+      setLikeOverride(null);
+      setLikeCountDelta(0);
     },
     onSettled: () => {
+      setLikeOverride(null);
       queryClient.invalidateQueries({ queryKey: ['feed'] });
       queryClient.invalidateQueries({ queryKey: ['explore-feed'] });
+      queryClient.invalidateQueries({ queryKey: ['me', 'likes'] });
     },
   });
 
   const saveMutation = useMutation({
-    mutationFn: () =>
-      isSaved ? postsApi.unsavePost(post.id) : postsApi.savePost(post.id),
-    onMutate: () => {
-      setIsSaved(!isSaved);
+    mutationFn: (currentlySaved: boolean) =>
+      currentlySaved
+        ? postsApi.unsavePost(post.id)
+        : postsApi.savePost(post.id),
+    onMutate: (currentlySaved) => {
+      setSaveOverride(!currentlySaved);
     },
     onError: () => {
-      setIsSaved(isSaved);
+      setSaveOverride(null);
     },
     onSettled: () => {
+      setSaveOverride(null);
       queryClient.invalidateQueries({ queryKey: ['me', 'saved'] });
     },
   });
@@ -92,7 +118,7 @@ export default function PostCard({ post }: PostCardProps) {
       router.push('/login');
       return;
     }
-    likeMutation.mutate();
+    likeMutation.mutate(isLiked);
   };
 
   const handleSaveClick = () => {
@@ -100,7 +126,7 @@ export default function PostCard({ post }: PostCardProps) {
       router.push('/login');
       return;
     }
-    saveMutation.mutate();
+    saveMutation.mutate(isSaved);
   };
 
   return (
@@ -108,7 +134,7 @@ export default function PostCard({ post }: PostCardProps) {
       <div className='flex items-center gap-2 lg:gap-3'>
         <Link href={`/profile/${post.author.username}`}>
           <Avatar className='h-11 w-11'>
-            <AvatarImage src={post.author.avatarUrl} />
+            <AvatarImage src={post.author.avatarUrl ?? undefined} />
             <AvatarFallback>{post.author.name[0]}</AvatarFallback>
           </Avatar>
         </Link>
@@ -143,7 +169,11 @@ export default function PostCard({ post }: PostCardProps) {
               className='focus:outline-none transition-transform active:scale-95'
             >
               <Heart
-                className={`h-6 w-6 ${isLiked ? 'fill-accent-red text-accent-red' : 'text-neutral-25'}`}
+                className={`h-6 w-6 ${
+                  isLiked
+                    ? 'fill-accent-red text-accent-red'
+                    : 'text-neutral-25'
+                }`}
               />
             </button>
             <span className='text-sm lg:text-md font-semibold'>
@@ -165,7 +195,9 @@ export default function PostCard({ post }: PostCardProps) {
           className='focus:outline-none transition-transform active:scale-95'
         >
           <Bookmark
-            className={`h-6 w-6 text-neutral-25 ${isSaved ? 'fill-neutral-25' : 'fill-none'}`}
+            className={`h-6 w-6 text-neutral-25 ${
+              isSaved ? 'fill-neutral-25' : 'fill-none'
+            }`}
           />
         </button>
       </div>

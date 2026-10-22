@@ -32,7 +32,7 @@ export interface User {
   email: string;
   phone?: string;
   bio?: string;
-  avatarUrl?: string;
+  avatarUrl?: string | null;
   isFollowedByMe?: boolean;
   isMe?: boolean;
   followsMe?: boolean;
@@ -43,6 +43,15 @@ export interface User {
     likes?: number;
     saved?: number;
   };
+}
+
+export interface UpdateProfilePayload {
+  name?: string;
+  username?: string;
+  phone?: string;
+  bio?: string;
+  avatar?: File;
+  avatarUrl?: string;
 }
 
 export interface UserSearchResponse {
@@ -57,11 +66,13 @@ export interface UserSearchResponse {
 
 export interface Post {
   id: number;
-  caption: string;
+  caption: string | null; // Fixed: Can be null from backend
   imageUrl: string;
   createdAt: string;
+  likedAt?: string;
   author: User;
-  isLikedByMe?: boolean;
+  likedByMe?: boolean;
+  isLikedByMe?: boolean; // Fixed: Added for PostCard compatibility
   isSavedByMe?: boolean;
   likeCount?: number;
   commentCount?: number;
@@ -97,16 +108,21 @@ export interface SearchUsersParams extends PaginationParams {
   q: string;
 }
 
+export interface PaginationMeta {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
+// Fixed: Flexible paginated wrapper to match dynamic API response keys (posts, users, items)
 export interface PaginatedResponse<T> {
-  data: {
-    items: T[];
-    pagination: {
-      page: number;
-      limit: number;
-      total: number;
-      totalPages: number;
-    };
-  };
   success?: boolean;
   message?: string;
+  data: {
+    posts?: T[];
+    users?: T[];
+    items?: T[];
+    pagination?: PaginationMeta;
+  };
 }
