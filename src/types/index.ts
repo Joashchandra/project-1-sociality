@@ -69,6 +69,11 @@ export interface Post {
   };
 }
 
+export interface CreatePostPayload {
+  image: File;
+  caption?: string;
+}
+
 export interface PaginationParams {
   page?: number;
   limit?: number;
@@ -79,9 +84,15 @@ export interface SearchUsersParams extends PaginationParams {
 }
 
 export interface PaginatedResponse<T> {
-  data: T[];
-  page: number;
-  limit: number;
-  total: number;
-  totalPages: number;
+  data: {
+    posts: T[];
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+    };
+  };
+  success?: boolean;
+  message?: string;
 }

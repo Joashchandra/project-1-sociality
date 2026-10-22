@@ -7,11 +7,15 @@ interface AuthState {
   isAuthenticated: boolean;
 }
 
+const localToken =
+  typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+const localUser =
+  typeof window !== 'undefined' ? localStorage.getItem('auth_user') : null;
+
 const initialState: AuthState = {
-  user: null,
-  token:
-    typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null,
-  isAuthenticated: false,
+  user: localUser ? JSON.parse(localUser) : null,
+  token: localToken,
+  isAuthenticated: Boolean(localToken),
 };
 
 const authSlice = createSlice({
@@ -26,16 +30,19 @@ const authSlice = createSlice({
       state.token = action.payload.token;
       state.isAuthenticated = true;
       localStorage.setItem('auth_token', action.payload.token);
+      localStorage.setItem('auth_user', JSON.stringify(action.payload.user));
     },
     setUser: (state, action: PayloadAction<User>) => {
       state.user = action.payload;
       state.isAuthenticated = true;
+      localStorage.setItem('auth_user', JSON.stringify(action.payload));
     },
     logout: (state) => {
       state.user = null;
       state.token = null;
       state.isAuthenticated = false;
       localStorage.removeItem('auth_token');
+      localStorage.removeItem('auth_user');
     },
   },
 });

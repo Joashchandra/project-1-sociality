@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useSyncExternalStore } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useSelector, useDispatch } from 'react-redux';
@@ -14,10 +14,21 @@ import { useUserSearch } from '@/hooks/useUserSearch';
 import Logo from './Logo';
 import SearchResultsList from './SearchResultList';
 
+const emptySubscribe = () => () => {};
+const useIsMounted = () => {
+  return useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false
+  );
+};
+
 export default function Navbar() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  const mounted = useIsMounted();
 
   const router = useRouter();
   const dispatch = useDispatch();
@@ -123,7 +134,9 @@ export default function Navbar() {
             </div>
 
             <div className='hidden lg:flex items-center gap-4 text-white'>
-              {isAuthenticated && user ? (
+              {!mounted ? (
+                <div className='h-9 w-24 bg-neutral-900 animate-pulse rounded-full' />
+              ) : isAuthenticated && user ? (
                 <div className='flex items-center gap-3'>
                   <Link
                     href='/me'
@@ -174,7 +187,7 @@ export default function Navbar() {
                 <Search className='h-5 w-5' />
               </button>
 
-              {isAuthenticated && user ? (
+              {mounted && isAuthenticated && user ? (
                 <Link href='/me'>
                   <Avatar className='h-8 w-8 border border-neutral-800'>
                     <AvatarImage src={user.avatarUrl || undefined} />
@@ -183,7 +196,7 @@ export default function Navbar() {
                     </AvatarFallback>
                   </Avatar>
                 </Link>
-              ) : (
+              ) : mounted ? (
                 <div className='relative'>
                   <button
                     onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -225,7 +238,7 @@ export default function Navbar() {
                     </div>
                   )}
                 </div>
-              )}
+              ) : null}
             </div>
           </>
         )}
