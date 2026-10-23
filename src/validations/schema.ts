@@ -57,5 +57,20 @@ export const registerSchema = z
     path: ['confirmPassword'],
   });
 
+export const editProfileSchema = z.object({
+  name: z.string().min(2, { message: 'Name must be at least 2 characters' }),
+  username: z
+    .string()
+    .min(3, { message: 'Username must be at least 3 characters' }),
+  email: emailSchema,
+  phone: phoneSchema,
+  bio: z
+    .string()
+    .max(200, { message: 'Bio must not exceed 200 characters' })
+    .optional(),
+  avatarUrl: z.string().optional(),
+});
+
 export type LoginInput = z.infer<typeof loginSchema>;
 export type RegisterInput = z.infer<typeof registerSchema>;
+export type EditProfileInput = z.infer<typeof editProfileSchema>;
