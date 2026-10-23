@@ -1,3 +1,4 @@
+import { BottomNav } from '@/components/shared/BottomNav';
 import Navbar from '@/components/shared/Navbar';
 
 export default function MainLayout({
@@ -9,6 +10,7 @@ export default function MainLayout({
     <div className='min-h-screen flex flex-col bg-black'>
       <Navbar />
       <main className='flex flex-col items-center w-full px-6'>{children}</main>
+      <BottomNav />
     </div>
   );
 }
