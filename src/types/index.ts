@@ -25,6 +25,32 @@ export interface LoginApiResponse {
   };
 }
 
+export interface UserCounts {
+  post: number;
+  followers: number;
+  following: number;
+  likes: number;
+}
+
+export interface PublicUserProfile {
+  id: number;
+  name: string;
+  username: string;
+  bio?: string | null;
+  avatarUrl?: string | null;
+  email?: string;
+  phone?: string;
+  counts: UserCounts;
+  isFollowing: boolean;
+  isMe: boolean;
+}
+
+export interface PublicProfileResponse {
+  success: boolean;
+  message: string;
+  data: PublicUserProfile;
+}
+
 export interface User {
   id: number;
   name: string;
@@ -33,6 +59,7 @@ export interface User {
   phone?: string;
   bio?: string;
   avatarUrl?: string | null;
+  isFollowing?: boolean;
   isFollowedByMe?: boolean;
   isMe?: boolean;
   followsMe?: boolean;

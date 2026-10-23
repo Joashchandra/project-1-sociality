@@ -6,6 +6,7 @@ import {
   PaginationParams,
   PaginatedResponse,
   UserSearchResponse,
+  PublicProfileResponse,
 } from '@/types';
 
 export const usersApi = {
@@ -16,7 +17,7 @@ export const usersApi = {
     return res.data.data;
   },
   getPublicProfile: async (username: string) => {
-    const res = await api.get<User>(`/users/${username}`);
+    const res = await api.get<PublicProfileResponse>(`/users/${username}`);
     return res.data;
   },
   getUserPosts: async (username: string, params?: PaginationParams) => {
