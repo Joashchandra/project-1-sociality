@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, ChangeEvent, DragEvent } from 'react';
+import { useState, useRef, useEffect, ChangeEvent, DragEvent } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, ArrowUpToLine, UploadCloud, Trash2 } from 'lucide-react';
 import Image from 'next/image';
@@ -30,6 +30,17 @@ export function CreatePostModal({
 
   const [imageError, setImageError] = useState<string | null>(null);
   const [captionError, setCaptionError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isOpen]);
 
   const resetForm = () => {
     setSelectedFile(null);
