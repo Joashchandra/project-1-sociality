@@ -118,8 +118,8 @@ export interface Comment {
   id: number;
   text: string;
   createdAt: string;
-  user: User;
-  postId: number;
+  author?: User;
+  user?: User;
 }
 
 export interface CreateCommentPayload {
@@ -165,6 +165,7 @@ export interface PaginatedResponse<T> {
     posts?: T[];
     users?: T[];
     items?: T[];
+    comments?: T[];
     pagination?: PaginationMeta;
   };
 }
