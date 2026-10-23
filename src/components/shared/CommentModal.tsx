@@ -267,7 +267,7 @@ export function CommentModal({
           </div>
 
           {post.caption && (
-            <div className='border-b border-neutral-900 pb-4 text-sm text-neutral-300 leading-relaxed'>
+            <div className='border-b border-neutral-900 p-4 pt-none text-sm text-neutral-300 leading-relaxed'>
               {post.caption}
             </div>
           )}
