@@ -14,16 +14,20 @@ import { RootState } from '@/store';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { useMyLikes, useMySaved } from '@/hooks/useMe';
+import { CommentModal } from './CommentModal';
 
 dayjs.extend(relativeTime);
 
 interface PostCardProps {
   post: Post;
+  onShowAlert?: (alert: { type: 'success' | 'error'; message: string }) => void;
 }
 
-export default function PostCard({ post }: PostCardProps) {
+export default function PostCard({ post, onShowAlert }: PostCardProps) {
   const queryClient = useQueryClient();
   const router = useRouter();
+
+  const [isCommentModalOpen, setIsCommentModalOpen] = useState(false);
 
   const { token, isAuthenticated } = useSelector(
     (state: RootState) => state.auth
@@ -40,14 +44,14 @@ export default function PostCard({ post }: PostCardProps) {
 
   const likesList = myLikesData?.data?.posts;
   const isLikedInQuery = Array.isArray(likesList)
-    ? likesList.some((likedPost: { id: number }) => likedPost.id === post.id)
+    ? likesList.some((likedPost: Post) => likedPost.id === post.id)
     : (post.isLikedByMe ?? post.likedByMe ?? false);
 
   const isLiked = likeOverride ?? isLikedInQuery;
 
   const savedList = mySavedData?.data?.posts;
   const isSavedInQuery = Array.isArray(savedList)
-    ? savedList.some((savedPost: { id: number }) => savedPost.id === post.id)
+    ? savedList.some((savedPost: Post) => savedPost.id === post.id)
     : (post.isSavedByMe ?? false);
 
   const isSaved = saveOverride ?? isSavedInQuery;
@@ -90,8 +94,8 @@ export default function PostCard({ post }: PostCardProps) {
     },
     onSettled: () => {
       setLikeOverride(null);
-      queryClient.invalidateQueries({ queryKey: ['feed'] });
-      queryClient.invalidateQueries({ queryKey: ['explore-feed'] });
+      queryClient.invalidateQueries({ queryKey: ['feed-infinite'] });
+      queryClient.invalidateQueries({ queryKey: ['explore-feed-infinite'] });
       queryClient.invalidateQueries({ queryKey: ['me', 'likes'] });
     },
   });
@@ -130,102 +134,113 @@ export default function PostCard({ post }: PostCardProps) {
   };
 
   return (
-    <div className='flex flex-col rounded-lg text-neutral-25 overflow-hidden gap-2 w-full max-w-150'>
-      <div className='flex items-center gap-2 lg:gap-3'>
-        <Link href={`/profile/${post.author.username}`}>
-          <Avatar className='h-11 w-11'>
-            <AvatarImage src={post.author.avatarUrl ?? undefined} />
-            <AvatarFallback>{post.author.name[0]}</AvatarFallback>
-          </Avatar>
-        </Link>
-        <div>
-          <Link
-            href={`/profile/${post.author.username}`}
-            className='text-sm font-bold text-neutral-25 hover:underline'
-          >
-            {post.author.name}
+    <>
+      <div className='flex flex-col rounded-lg text-neutral-25 overflow-hidden gap-2 w-full max-w-150'>
+        <div className='flex items-center gap-2 lg:gap-3'>
+          <Link href={`/profile/${post.author.username}`}>
+            <Avatar className='h-11 w-11'>
+              <AvatarImage src={post.author.avatarUrl ?? undefined} />
+              <AvatarFallback>{post.author.name[0]}</AvatarFallback>
+            </Avatar>
           </Link>
-          <p className='text-xs text-neutral-400'>
-            {dayjs(post.createdAt).fromNow()}
-          </p>
-        </div>
-      </div>
-
-      <div className='relative aspect-square w-full'>
-        <Image
-          src={post.imageUrl}
-          alt='Post image'
-          fill
-          unoptimized
-          className='rounded-md object-cover'
-        />
-      </div>
-
-      <div className='flex items-center justify-between'>
-        <div className='flex items-center gap-3 lg:gap-4'>
-          <div className='flex items-center gap-1.5'>
-            <button
-              onClick={handleLikeClick}
-              className='focus:outline-none transition-transform active:scale-95'
+          <div>
+            <Link
+              href={`/profile/${post.author.username}`}
+              className='text-sm font-bold text-neutral-25 hover:underline'
             >
-              <Heart
-                className={`h-6 w-6 ${
-                  isLiked
-                    ? 'fill-accent-red text-accent-red'
-                    : 'text-neutral-25'
-                }`}
-              />
+              {post.author.name}
+            </Link>
+            <p className='text-xs text-neutral-400'>
+              {dayjs(post.createdAt).fromNow()}
+            </p>
+          </div>
+        </div>
+
+        <div className='relative aspect-square w-full'>
+          <Image
+            src={post.imageUrl}
+            alt='Post image'
+            fill
+            unoptimized
+            className='rounded-md object-cover'
+          />
+        </div>
+
+        <div className='flex items-center justify-between'>
+          <div className='flex items-center gap-3 lg:gap-4'>
+            <div className='flex items-center gap-1.5'>
+              <button
+                onClick={handleLikeClick}
+                className='focus:outline-none transition-transform active:scale-95'
+              >
+                <Heart
+                  className={`h-6 w-6 ${
+                    isLiked
+                      ? 'fill-accent-red text-accent-red'
+                      : 'text-neutral-25'
+                  }`}
+                />
+              </button>
+              <span className='text-sm lg:text-md font-semibold'>
+                {likeCount}
+              </span>
+            </div>
+
+            <button
+              type='button'
+              onClick={() => setIsCommentModalOpen(true)}
+              className='flex items-center gap-1.5 focus:outline-none cursor-pointer'
+              aria-label='Open comments'
+            >
+              <MessageCircle className='h-6 w-6 text-neutral-25' />
+              <span className='text-sm font-semibold'>{commentCount}</span>
             </button>
-            <span className='text-sm lg:text-md font-semibold'>
-              {likeCount}
-            </span>
           </div>
 
-          <Link
-            href={`/posts/${post.id}`}
-            className='flex items-center gap-1.5'
+          <button
+            onClick={handleSaveClick}
+            className='focus:outline-none transition-transform active:scale-95'
           >
-            <MessageCircle className='h-6 w-6' />
-            <span className='text-sm font-semibold'>{commentCount}</span>
-          </Link>
+            <Bookmark
+              className={`h-6 w-6 text-neutral-25 ${
+                isSaved ? 'fill-neutral-25' : 'fill-none'
+              }`}
+            />
+          </button>
         </div>
 
-        <button
-          onClick={handleSaveClick}
-          className='focus:outline-none transition-transform active:scale-95'
-        >
-          <Bookmark
-            className={`h-6 w-6 text-neutral-25 ${
-              isSaved ? 'fill-neutral-25' : 'fill-none'
-            }`}
-          />
-        </button>
+        {post.caption && (
+          <div className='text-sm lg:text-md flex flex-col'>
+            <Link
+              href={`/profile/${post.author.username}`}
+              className='font-bold hover:underline w-fit'
+            >
+              {post.author.username}
+            </Link>
+            <p
+              ref={textRef}
+              className={`text-neutral-25 ${!isExpanded ? 'line-clamp-2' : ''}`}
+            >
+              {post.caption}
+            </p>
+            {(isOverflowing || isExpanded) && (
+              <button
+                onClick={() => setIsExpanded(!isExpanded)}
+                className='font-bold text-primary-200 hover:brightness-125 text-left cursor-pointer'
+              >
+                {isExpanded ? 'Show less' : 'Show more'}
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
-      {post.caption && (
-        <div className='text-sm lg:text-md flex flex-col'>
-          <Link
-            href={`/profile/${post.author.username}`}
-            className='font-bold hover:underline w-fit'
-          >
-            {post.author.username}
-          </Link>
-          <p
-            ref={textRef}
-            className={`text-neutral-25 ${!isExpanded ? 'line-clamp-2' : ''}`}
-          >
-            {post.caption}
-          </p>
-          {(isOverflowing || isExpanded) && (
-            <button
-              onClick={() => setIsExpanded(!isExpanded)}
-              className='font-bold text-primary-200 hover:brightness-125 text-left cursor-pointer'
-            >
-              {isExpanded ? 'Show less' : 'Show more'}
-            </button>
-          )}
-        </div>
-      )}
-    </div>
+      <CommentModal
+        post={post}
+        isOpen={isCommentModalOpen}
+        onClose={() => setIsCommentModalOpen(false)}
+        onShowAlert={onShowAlert}
+      />
+    </>
   );
 }
