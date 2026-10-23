@@ -2,13 +2,10 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { useDispatch } from 'react-redux';
-import { logout } from '@/store/authSlice';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { Menu, X, Search, LogOut, XCircle } from 'lucide-react';
+import { Menu, X, Search, XCircle } from 'lucide-react';
 import { useUserSearch } from '@/hooks/useUserSearch';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import Logo from './Logo';
@@ -19,20 +16,11 @@ export default function Navbar() {
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  const router = useRouter();
-  const dispatch = useDispatch();
-
-  // Clean, decoupled hook usage
   const { user, isLoggedIn, isMounted } = useCurrentUser();
 
   const { data: searchResults, isLoading } = useUserSearch(searchQuery, 10);
   const usersList = searchResults?.users || [];
   const hasTyped = searchQuery.trim().length > 0;
-
-  const handleLogout = () => {
-    dispatch(logout());
-    router.push('/login');
-  };
 
   const handleCloseMobileSearch = () => {
     setIsMobileSearchOpen(false);
@@ -139,14 +127,6 @@ export default function Navbar() {
                     </Avatar>
                     <span className='text-sm font-semibold'>{user.name}</span>
                   </Link>
-                  <Button
-                    variant='ghost'
-                    size='icon'
-                    onClick={handleLogout}
-                    className='text-neutral-400 hover:text-white hover:bg-neutral-800 cursor-pointer'
-                  >
-                    <LogOut className='h-5 w-5' />
-                  </Button>
                 </div>
               ) : (
                 <div className='flex gap-2'>

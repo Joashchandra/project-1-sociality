@@ -3,19 +3,29 @@
 import { useState } from 'react';
 import { Post } from '@/types';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { LayoutGrid, Bookmark, Send } from 'lucide-react';
+import { LayoutGrid, Bookmark, Send, LogOut } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
+import { useDispatch } from 'react-redux';
+import { useQueryClient } from '@tanstack/react-query';
+import { logout } from '@/store/authSlice';
 import { CreatePostModal } from '@/components/shared/CreatePost';
 import { EditProfileModal } from '@/components/shared/EditProfile';
 import { Alert } from '@/components/shared/Alert';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useMyPosts, useMyProfile, useMySaved } from '@/hooks/useMe';
+import { Button } from '@/components/ui/button';
 
 export default function ProfilePage() {
+  const router = useRouter();
+  const dispatch = useDispatch();
+  const queryClient = useQueryClient();
+
   const [activeTab, setActiveTab] = useState<'gallery' | 'saved'>('gallery');
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false); // 👈 Logout confirmation modal state
   const [alertState, setAlertState] = useState<{
     type: 'success' | 'error';
     message: string;
@@ -41,6 +51,12 @@ export default function ProfilePage() {
     setTimeout(() => {
       setAlertState(null);
     }, 4000);
+  };
+
+  const executeLogout = () => {
+    dispatch(logout());
+    queryClient.clear();
+    router.push('/login');
   };
 
   if (!isMounted) {
@@ -75,21 +91,32 @@ export default function ProfilePage() {
       <div className='flex flex-col pt-4 gap-4 items-center w-full text-neutral-25 lg:max-w-203'>
         <div className='flex flex-col w-full gap-4'>
           <div className='flex flex-col gap-3 justify-between w-full lg:flex-row'>
-            <div className='flex items-center gap-3 lg:gap-5'>
-              <Avatar className='h-16 w-16 border border-neutral-900'>
-                <AvatarImage src={profileData?.avatarUrl ?? undefined} />
-                <AvatarFallback className='text-xl font-bold bg-neutral-800 text-neutral-25'>
-                  {profileData?.name?.[0] ?? 'U'}
-                </AvatarFallback>
-              </Avatar>
-              <div className='flex flex-col'>
-                <h1 className='text-sm lg:text-md font-bold'>
-                  {profileData?.name ?? 'User'}
-                </h1>
-                <p className='text-sm lg:text-md font-normal text-neutral-400'>
-                  {profileData?.username ?? 'username'}
-                </p>
+            <div className='flex items-center justify-between w-full lg:w-auto lg:justify-start gap-3 lg:gap-5'>
+              <div className='flex items-center gap-3 lg:gap-5'>
+                <Avatar className='h-16 w-16 border border-neutral-900'>
+                  <AvatarImage src={profileData?.avatarUrl ?? undefined} />
+                  <AvatarFallback className='text-xl font-bold bg-neutral-800 text-neutral-25'>
+                    {profileData?.name?.[0] ?? 'U'}
+                  </AvatarFallback>
+                </Avatar>
+                <div className='flex flex-col'>
+                  <h1 className='text-sm lg:text-md font-bold'>
+                    {profileData?.name ?? 'User'}
+                  </h1>
+                  <p className='text-sm lg:text-md font-normal text-neutral-400'>
+                    {profileData?.username ?? 'username'}
+                  </p>
+                </div>
               </div>
+
+              <Button
+                size='icon'
+                onClick={() => setIsLogoutModalOpen(true)}
+                className='flex lg:hidden items-center justify-center w-10 h-10 rounded-full border border-neutral-900 transition text-neutral-25 hover:text-accent-red hover:bg-neutral-800 cursor-pointer'
+                aria-label='Logout'
+              >
+                <LogOut className='h-4 w-4' />
+              </Button>
             </div>
 
             <div className='flex items-center gap-2 lg:gap-3'>
@@ -101,11 +128,21 @@ export default function ProfilePage() {
                 Edit Profile
               </button>
               <button
-                className='flex items-center justify-center w-10 aspect-square rounded-[1665.83px] border-[0.83px] border-neutral-900 hover:bg-neutral-800 transition lg:w-12 lg:h-12'
+                type='button'
+                className='flex items-center justify-center w-10 aspect-square rounded-[1665.83px] border-[0.83px] border-neutral-900 hover:bg-neutral-800 transition lg:w-12 lg:h-12 cursor-pointer'
                 aria-label='Share Profile'
               >
                 <Send className='h-4 w-4 lg:h-5 lg:w-5' />
               </button>
+
+              <Button
+                size='icon'
+                onClick={() => setIsLogoutModalOpen(true)}
+                className='hidden lg:flex items-center justify-center w-12 h-12 rounded-full border border-neutral-900 transition text-neutral-25 hover:text-accent-red hover:bg-neutral-800 cursor-pointer'
+                aria-label='Logout'
+              >
+                <LogOut className='h-5 w-5' />
+              </Button>
             </div>
           </div>
 
@@ -149,7 +186,7 @@ export default function ProfilePage() {
           <div className='flex border-b border-neutral-900 w-full'>
             <button
               onClick={() => setActiveTab('gallery')}
-              className={`flex items-center justify-center h-12 gap-2 flex-1 py-3 text-sm font-bold border-b-2 transition lg:text-md ${
+              className={`flex items-center justify-center h-12 gap-2 flex-1 py-3 text-sm font-bold border-b-2 transition lg:text-md cursor-pointer ${
                 activeTab === 'gallery'
                   ? 'border-neutral-25 text-neutral-25'
                   : 'border-transparent text-neutral-400 hover:text-neutral-300'
@@ -161,7 +198,7 @@ export default function ProfilePage() {
 
             <button
               onClick={() => setActiveTab('saved')}
-              className={`flex items-center justify-center gap-2 flex-1 py-3 text-sm font-semibold border-b-2 transition lg:text-md ${
+              className={`flex items-center justify-center gap-2 flex-1 py-3 text-sm font-semibold border-b-2 transition lg:text-md cursor-pointer ${
                 activeTab === 'saved'
                   ? 'border-neutral-25 text-neutral-25'
                   : 'border-transparent text-neutral-500 hover:text-neutral-400'
@@ -227,6 +264,30 @@ export default function ProfilePage() {
           )}
         </div>
       </div>
+
+      {isLogoutModalOpen && (
+        <div className='fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs px-4'>
+          <div className='flex flex-col w-full max-w-100 bg-[#111318] border border-neutral-800 rounded-2xl p-6 gap-5 text-neutral-25'>
+            <div className='flex flex-col gap-2 text-center'>
+              <h3 className='text-lg font-bold'>Log out of your account?</h3>
+            </div>
+            <div className='flex flex-col gap-2.5'>
+              <Button
+                onClick={executeLogout}
+                className='w-full h-11 bg-red-600 hover:bg-red-700 font-bold rounded-xl transition cursor-pointer'
+              >
+                Log Out
+              </Button>
+              <Button
+                onClick={() => setIsLogoutModalOpen(false)}
+                className='w-full h-11 border-neutral-800 bg-transparent hover:bg-neutral-800 font-semibold rounded-xl transition cursor-pointer'
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <CreatePostModal
         isOpen={isCreateModalOpen}
