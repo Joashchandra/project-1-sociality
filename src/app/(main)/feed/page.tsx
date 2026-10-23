@@ -44,9 +44,8 @@ export default function FeedPage() {
 
   if (!isMounted || isLoading) {
     return (
-      <div className='flex flex-col items-center justify-center py-12 gap-4 text-neutral-400'>
-        <div className='w-full max-w-150 h-64 bg-neutral-900 animate-pulse rounded-xl' />
-        <span className='text-sm font-medium'>Loading feed...</span>
+      <div className='flex flex-col items-center justify-center w-full gap-4 text-neutral-400'>
+        <div className='flex w-full max-w-150 h-screen bg-neutral-900 animate-pulse rounded-xl'></div>
       </div>
     );
   }
