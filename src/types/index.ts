@@ -66,13 +66,13 @@ export interface UserSearchResponse {
 
 export interface Post {
   id: number;
-  caption: string | null; // Fixed: Can be null from backend
+  caption: string | null;
   imageUrl: string;
   createdAt: string;
   likedAt?: string;
   author: User;
   likedByMe?: boolean;
-  isLikedByMe?: boolean; // Fixed: Added for PostCard compatibility
+  isLikedByMe?: boolean;
   isSavedByMe?: boolean;
   likeCount?: number;
   commentCount?: number;
@@ -108,6 +108,22 @@ export interface SearchUsersParams extends PaginationParams {
   q: string;
 }
 
+export interface MeStats {
+  posts?: number;
+  followers?: number;
+  following?: number;
+  likes?: number;
+}
+
+export interface MeApiResponse {
+  success?: boolean;
+  message?: string;
+  data?: {
+    profile?: User;
+    stats?: MeStats;
+  };
+}
+
 export interface PaginationMeta {
   page: number;
   limit: number;
@@ -115,7 +131,6 @@ export interface PaginationMeta {
   totalPages: number;
 }
 
-// Fixed: Flexible paginated wrapper to match dynamic API response keys (posts, users, items)
 export interface PaginatedResponse<T> {
   success?: boolean;
   message?: string;
