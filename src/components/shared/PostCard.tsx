@@ -15,6 +15,7 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { useMyLikes, useMySaved } from '@/hooks/useMe';
 import { CommentModal } from './CommentModal';
+import { LikesModal } from './LikesModal';
 
 dayjs.extend(relativeTime);
 
@@ -28,6 +29,11 @@ export default function PostCard({ post, onShowAlert }: PostCardProps) {
   const router = useRouter();
 
   const [isCommentModalOpen, setIsCommentModalOpen] = useState(false);
+  const [isLikesModalOpen, setIsLikesModalOpen] = useState(false);
+
+  const holdTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const pressStartTimeRef = useRef<number>(0);
+  const didTriggerHoldRef = useRef(false);
 
   const { token, isAuthenticated } = useSelector(
     (state: RootState) => state.auth
@@ -39,27 +45,17 @@ export default function PostCard({ post, onShowAlert }: PostCardProps) {
   const { data: myLikesData } = useMyLikes({ page: 1, limit: 20 }, isLoggedIn);
   const { data: mySavedData } = useMySaved({ page: 1, limit: 20 }, isLoggedIn);
 
-  const [likeOverride, setLikeOverride] = useState<boolean | null>(null);
-  const [saveOverride, setSaveOverride] = useState<boolean | null>(null);
-
   const likesList = myLikesData?.data?.posts;
-  const isLikedInQuery = Array.isArray(likesList)
+  const isLiked = Array.isArray(likesList)
     ? likesList.some((likedPost: Post) => likedPost.id === post.id)
     : (post.isLikedByMe ?? post.likedByMe ?? false);
 
-  const isLiked = likeOverride ?? isLikedInQuery;
-
   const savedList = mySavedData?.data?.posts;
-  const isSavedInQuery = Array.isArray(savedList)
+  const isSaved = Array.isArray(savedList)
     ? savedList.some((savedPost: Post) => savedPost.id === post.id)
     : (post.isSavedByMe ?? false);
 
-  const isSaved = saveOverride ?? isSavedInQuery;
-
-  const initialLikeCount = post._count?.likes ?? post.likeCount ?? 0;
-  const [likeCountDelta, setLikeCountDelta] = useState(0);
-  const likeCount = initialLikeCount + likeCountDelta;
-
+  const likeCount = post._count?.likes ?? post.likeCount ?? 0;
   const commentCount = post._count?.comments ?? post.commentCount ?? 0;
 
   const [isExpanded, setIsExpanded] = useState(false);
@@ -84,16 +80,7 @@ export default function PostCard({ post, onShowAlert }: PostCardProps) {
       currentlyLiked
         ? postsApi.unlikePost(post.id)
         : postsApi.likePost(post.id),
-    onMutate: (currentlyLiked) => {
-      setLikeOverride(!currentlyLiked);
-      setLikeCountDelta((prev) => (currentlyLiked ? prev - 1 : prev + 1));
-    },
-    onError: () => {
-      setLikeOverride(null);
-      setLikeCountDelta(0);
-    },
-    onSettled: () => {
-      setLikeOverride(null);
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['feed-infinite'] });
       queryClient.invalidateQueries({ queryKey: ['explore-feed-infinite'] });
       queryClient.invalidateQueries({ queryKey: ['me', 'likes'] });
@@ -105,19 +92,38 @@ export default function PostCard({ post, onShowAlert }: PostCardProps) {
       currentlySaved
         ? postsApi.unsavePost(post.id)
         : postsApi.savePost(post.id),
-    onMutate: (currentlySaved) => {
-      setSaveOverride(!currentlySaved);
-    },
-    onError: () => {
-      setSaveOverride(null);
-    },
-    onSettled: () => {
-      setSaveOverride(null);
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['me', 'saved'] });
     },
   });
 
-  const handleLikeClick = () => {
+  const handleHoldStart = () => {
+    didTriggerHoldRef.current = false;
+    pressStartTimeRef.current = Date.now();
+
+    if (holdTimerRef.current) clearTimeout(holdTimerRef.current);
+
+    holdTimerRef.current = setTimeout(() => {
+      didTriggerHoldRef.current = true;
+      setIsLikesModalOpen(true);
+    }, 500);
+  };
+
+  const handleHoldEnd = () => {
+    if (holdTimerRef.current) {
+      clearTimeout(holdTimerRef.current);
+      holdTimerRef.current = null;
+    }
+  };
+
+  const handleLikeClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+
+    const duration = Date.now() - pressStartTimeRef.current;
+    if (didTriggerHoldRef.current || duration >= 500) {
+      didTriggerHoldRef.current = false;
+      return;
+    }
     if (!isLoggedIn) {
       router.push('/login');
       return;
@@ -170,8 +176,14 @@ export default function PostCard({ post, onShowAlert }: PostCardProps) {
           <div className='flex items-center gap-3 lg:gap-4'>
             <div className='flex items-center gap-1.5'>
               <button
+                type='button'
+                onMouseDown={handleHoldStart}
+                onMouseUp={handleHoldEnd}
+                onMouseLeave={handleHoldEnd}
+                onTouchStart={handleHoldStart}
+                onTouchEnd={handleHoldEnd}
                 onClick={handleLikeClick}
-                className='focus:outline-none transition-transform active:scale-95'
+                className='focus:outline-none transition-transform active:scale-95 cursor-pointer'
               >
                 <Heart
                   className={`h-6 w-6 ${
@@ -239,6 +251,13 @@ export default function PostCard({ post, onShowAlert }: PostCardProps) {
         post={post}
         isOpen={isCommentModalOpen}
         onClose={() => setIsCommentModalOpen(false)}
+        onShowAlert={onShowAlert}
+      />
+
+      <LikesModal
+        postId={post.id}
+        isOpen={isLikesModalOpen}
+        onClose={() => setIsLikesModalOpen(false)}
         onShowAlert={onShowAlert}
       />
     </>
