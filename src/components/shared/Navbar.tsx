@@ -28,7 +28,7 @@ export default function Navbar() {
   };
 
   return (
-    <nav className='relative flex items-center h-[64px] lg:h-20 top-0 z-50 bg-black border-b border-neutral-900 px-4 xl:px-30'>
+    <nav className='sticky flex items-center h-[64px] lg:h-20 top-0 z-50 bg-black border-b border-neutral-900 px-4 xl:px-30'>
       <div className='flex w-full items-center justify-between gap-4'>
         {isMobileSearchOpen ? (
           <div className='fixed inset-0 z-50 bg-black flex flex-col lg:hidden'>
