@@ -11,6 +11,8 @@ import Image from 'next/image';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/store';
 import { CreatePostModal } from '@/components/shared/CreatePost';
+import { EditProfileModal } from '@/components/shared/EditProfile';
+import { Alert } from '@/components/shared/Alert';
 
 const subscribe = () => () => {};
 const getLocalStorageToken = () => localStorage.getItem('auth_token');
@@ -22,7 +24,13 @@ const getServerFalse = () => false;
 
 export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState<'gallery' | 'saved'>('gallery');
+
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [alertState, setAlertState] = useState<{
+    type: 'success' | 'error';
+    message: string;
+  } | null>(null);
 
   const isMounted = useSyncExternalStore(
     emptySubscribe,
@@ -70,6 +78,16 @@ export default function ProfilePage() {
     enabled: isLoggedIn && isMounted && activeTab === 'saved',
   });
 
+  const handleShowAlert = (alert: {
+    type: 'success' | 'error';
+    message: string;
+  }) => {
+    setAlertState(alert);
+    setTimeout(() => {
+      setAlertState(null);
+    }, 4000);
+  };
+
   if (!isMounted) {
     return (
       <div className='flex flex-col pt-4 gap-4 items-center w-full text-neutral-25'>
@@ -88,6 +106,17 @@ export default function ProfilePage() {
 
   return (
     <>
+      {alertState && (
+        <div className='fixed top-21.5 right-5 left-5 lg:left-auto lg:right-5 z-50 flex h-10 w-auto lg:top-28 lg:max-w-72.75 lg:w-full'>
+          <Alert
+            type={alertState.type}
+            message={alertState.message}
+            onClose={() => setAlertState(null)}
+            className='w-full'
+          />
+        </div>
+      )}
+
       <div className='flex flex-col pt-4 gap-4 items-center w-full text-neutral-25 lg:max-w-203'>
         <div className='flex flex-col w-full gap-4'>
           <div className='flex flex-col gap-3 justify-between w-full lg:flex-row'>
@@ -102,19 +131,20 @@ export default function ProfilePage() {
                 <h1 className='text-sm lg:text-md font-bold'>
                   {profileData?.name ?? 'User'}
                 </h1>
-                <p className='text-sm lg:text-md font-normal'>
+                <p className='text-sm lg:text-md font-normal text-neutral-400'>
                   {profileData?.username ?? 'username'}
                 </p>
               </div>
             </div>
 
             <div className='flex items-center gap-2 lg:gap-3'>
-              <Link
-                href='/edit-profile'
-                className='flex w-full justify-center items-center h-10 border border-neutral-900 rounded-[100px] py-2 px-4 gap-2 text-sm font-bold hover:bg-neutral-800 transition lg:h-12 lg:max-w-32.5'
+              <button
+                type='button'
+                onClick={() => setIsEditModalOpen(true)}
+                className='flex w-full justify-center items-center h-10 border border-neutral-900 rounded-[100px] py-2 px-4 gap-2 text-sm font-bold hover:bg-neutral-800 transition lg:h-12 lg:max-w-32.5 cursor-pointer text-neutral-25'
               >
                 Edit Profile
-              </Link>
+              </button>
               <button
                 className='flex items-center justify-center w-10 aspect-square rounded-[1665.83px] border-[0.83px] border-neutral-900 hover:bg-neutral-800 transition lg:w-12 lg:h-12'
                 aria-label='Share Profile'
@@ -246,7 +276,14 @@ export default function ProfilePage() {
       <CreatePostModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
-        onShowAlert={() => {}}
+        onShowAlert={handleShowAlert}
+      />
+
+      <EditProfileModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        currentUser={profileData}
+        onShowAlert={handleShowAlert}
       />
     </>
   );
