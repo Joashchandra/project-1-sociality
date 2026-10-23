@@ -1,40 +1,29 @@
 'use client';
 
-import { useState, useSyncExternalStore } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useSelector, useDispatch } from 'react-redux';
-import { RootState } from '@/store';
+import { useDispatch } from 'react-redux';
 import { logout } from '@/store/authSlice';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Menu, X, Search, LogOut, XCircle } from 'lucide-react';
 import { useUserSearch } from '@/hooks/useUserSearch';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
 import Logo from './Logo';
 import SearchResultsList from './SearchResultList';
-
-const emptySubscribe = () => () => {};
-const useIsMounted = () => {
-  return useSyncExternalStore(
-    emptySubscribe,
-    () => true,
-    () => false
-  );
-};
 
 export default function Navbar() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isMobileSearchOpen, setIsMobileSearchOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  const mounted = useIsMounted();
-
   const router = useRouter();
   const dispatch = useDispatch();
-  const { user, isAuthenticated } = useSelector(
-    (state: RootState) => state.auth
-  );
+
+  // Clean, decoupled hook usage
+  const { user, isLoggedIn, isMounted } = useCurrentUser();
 
   const { data: searchResults, isLoading } = useUserSearch(searchQuery, 10);
   const usersList = searchResults?.users || [];
@@ -134,9 +123,9 @@ export default function Navbar() {
             </div>
 
             <div className='hidden lg:flex items-center gap-4 text-white'>
-              {!mounted ? (
+              {!isMounted ? (
                 <div className='h-9 w-24 bg-neutral-900 animate-pulse rounded-full' />
-              ) : isAuthenticated && user ? (
+              ) : isLoggedIn && user ? (
                 <div className='flex items-center gap-3'>
                   <Link
                     href='/me'
@@ -144,7 +133,7 @@ export default function Navbar() {
                   >
                     <Avatar className='h-9 w-9 border border-neutral-800'>
                       <AvatarImage src={user.avatarUrl || undefined} />
-                      <AvatarFallback className='bg-neutral-800 text-white'>
+                      <AvatarFallback className='bg-neutral-800 text-white font-bold'>
                         {user.name ? user.name[0] : 'U'}
                       </AvatarFallback>
                     </Avatar>
@@ -154,7 +143,7 @@ export default function Navbar() {
                     variant='ghost'
                     size='icon'
                     onClick={handleLogout}
-                    className='text-neutral-400 hover:text-white hover:bg-neutral-800'
+                    className='text-neutral-400 hover:text-white hover:bg-neutral-800 cursor-pointer'
                   >
                     <LogOut className='h-5 w-5' />
                   </Button>
@@ -187,16 +176,16 @@ export default function Navbar() {
                 <Search className='h-5 w-5' />
               </button>
 
-              {mounted && isAuthenticated && user ? (
+              {isMounted && isLoggedIn && user ? (
                 <Link href='/me'>
                   <Avatar className='h-8 w-8 border border-neutral-800'>
                     <AvatarImage src={user.avatarUrl || undefined} />
-                    <AvatarFallback className='bg-neutral-800 text-white'>
+                    <AvatarFallback className='bg-neutral-800 text-white font-bold'>
                       {user.name ? user.name[0] : 'U'}
                     </AvatarFallback>
                   </Avatar>
                 </Link>
-              ) : mounted ? (
+              ) : isMounted ? (
                 <div className='relative'>
                   <button
                     onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}

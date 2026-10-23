@@ -1,11 +1,10 @@
 'use client';
 
 import { useState, useRef, useEffect, ChangeEvent, DragEvent } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, ArrowUpToLine, UploadCloud, Trash2 } from 'lucide-react';
 import Image from 'next/image';
-import { postsApi } from '@/services/post';
 import { Textarea } from '@/components/ui/textarea';
+import { useCreatePostMutation } from '@/hooks/usePostMutation';
 
 interface CreatePostModalProps {
   isOpen: boolean;
@@ -20,7 +19,6 @@ export function CreatePostModal({
   onSuccessPost,
   onShowAlert,
 }: CreatePostModalProps) {
-  const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -57,6 +55,12 @@ export function CreatePostModal({
     resetForm();
     onClose();
   };
+
+  const createPostMutation = useCreatePostMutation({
+    onSuccessPost,
+    onShowAlert,
+    onClose: handleCloseModal,
+  });
 
   const handleFileSelect = (file: File) => {
     setImageError(null);
@@ -111,34 +115,6 @@ export function CreatePostModal({
     }
   };
 
-  const createPostMutation = useMutation({
-    mutationFn: async () => {
-      if (!selectedFile) throw new Error('Please upload an image.');
-      if (!caption.trim()) throw new Error('Caption is required.');
-      return postsApi.createPost({
-        image: selectedFile,
-        caption: caption.trim(),
-      });
-    },
-    onSuccess: () => {
-      onShowAlert({
-        type: 'success',
-        message: 'Success Post',
-      });
-      queryClient.invalidateQueries({ queryKey: ['feed'] });
-      queryClient.invalidateQueries({ queryKey: ['me', 'posts'] });
-
-      handleCloseModal();
-      onSuccessPost?.();
-    },
-    onError: (error: Error) => {
-      onShowAlert({
-        type: 'error',
-        message: error.message || 'Failed to share post. Please try again.',
-      });
-    },
-  });
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setImageError(null);
@@ -158,7 +134,7 @@ export function CreatePostModal({
 
     if (hasError) return;
 
-    createPostMutation.mutate();
+    createPostMutation.mutate({ selectedFile, caption });
   };
 
   if (!isOpen) return null;

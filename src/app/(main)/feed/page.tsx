@@ -1,20 +1,13 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { useSelector } from 'react-redux';
-import { RootState } from '@/store';
 import PostCard from '@/components/shared/PostCard';
 import { useInfinitePosts } from '@/hooks/useInfinitePosts';
 import Divider from '@/components/shared/Divider';
+import { useCurrentUser } from '@/hooks/useCurrentUser';
 
 export default function FeedPage() {
-  const { token, isAuthenticated } = useSelector(
-    (state: RootState) => state.auth
-  );
-
-  const storedToken =
-    typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
-  const isLoggedIn = isAuthenticated || Boolean(token) || Boolean(storedToken);
+  const { isLoggedIn, isMounted } = useCurrentUser();
 
   const {
     posts,
@@ -49,11 +42,22 @@ export default function FeedPage() {
     };
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  if (isLoading) return <div className='text-center py-8'>Loading feed...</div>;
-  if (isError)
+  if (!isMounted || isLoading) {
     return (
-      <div className='text-center py-8 text-red-500'>Failed to load feed.</div>
+      <div className='flex flex-col items-center justify-center py-12 gap-4 text-neutral-400'>
+        <div className='w-full max-w-150 h-64 bg-neutral-900 animate-pulse rounded-xl' />
+        <span className='text-sm font-medium'>Loading feed...</span>
+      </div>
     );
+  }
+
+  if (isError) {
+    return (
+      <div className='text-center py-12 text-accent-red font-medium'>
+        Failed to load feed. Please try refreshing.
+      </div>
+    );
+  }
 
   return (
     <div>

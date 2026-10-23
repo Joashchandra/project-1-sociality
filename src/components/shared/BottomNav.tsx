@@ -1,47 +1,22 @@
 'use client';
 
-import { useState, useSyncExternalStore } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Plus } from 'lucide-react';
-import { useSelector } from 'react-redux';
-import { RootState } from '@/store';
 import { CreatePostModal } from './CreatePost';
 import { Alert } from './Alert';
-
-const subscribe = () => () => {};
-const getLocalStorageToken = () => localStorage.getItem('auth_token');
-const getServerToken = () => null;
-
-const emptySubscribe = () => () => {};
-const getClientTrue = () => true;
-const getServerFalse = () => false;
+import { useCurrentUser } from '@/hooks/useCurrentUser';
 
 export function BottomNav() {
   const pathname = usePathname();
+  const { isLoggedIn, isMounted } = useCurrentUser();
+
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [alertState, setAlertState] = useState<{
     type: 'success' | 'error';
     message: string;
   } | null>(null);
-
-  const isMounted = useSyncExternalStore(
-    emptySubscribe,
-    getClientTrue,
-    getServerFalse
-  );
-
-  const { token, isAuthenticated } = useSelector(
-    (state: RootState) => state.auth
-  );
-
-  const storedToken = useSyncExternalStore(
-    subscribe,
-    getLocalStorageToken,
-    getServerToken
-  );
-
-  const isLoggedIn = isAuthenticated || Boolean(token) || Boolean(storedToken);
 
   if (!isMounted || !isLoggedIn) return null;
 
@@ -55,9 +30,8 @@ export function BottomNav() {
     setAlertState(alert);
     setTimeout(() => {
       setAlertState(null);
-    }, 20000);
+    }, 4000);
   };
-
   return (
     <>
       {alertState && (

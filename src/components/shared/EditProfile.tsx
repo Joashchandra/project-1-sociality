@@ -3,14 +3,13 @@
 import { useState, useRef, useEffect, ChangeEvent } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft } from 'lucide-react';
-import { meApi } from '@/services/me';
 import { User } from '@/types';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { EditProfileInput, editProfileSchema } from '@/validations/schema';
+import { useUpdateProfileMutation } from '@/hooks/usePostMutation';
 
 interface EditProfileModalProps {
   isOpen: boolean;
@@ -25,7 +24,6 @@ export function EditProfileModal({
   currentUser,
   onShowAlert,
 }: EditProfileModalProps) {
-  const queryClient = useQueryClient();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
@@ -43,6 +41,11 @@ export function EditProfileModal({
       document.body.style.overflow = '';
     };
   }, [isOpen]);
+
+  const updateProfileMutation = useUpdateProfileMutation({
+    onShowAlert,
+    onClose,
+  });
 
   const {
     register,
@@ -93,35 +96,12 @@ export function EditProfileModal({
     }
   };
 
-  const updateProfileMutation = useMutation({
-    mutationFn: async (data: EditProfileInput) => {
-      return meApi.updateProfile({
-        name: data.name.trim(),
-        username: data.username.trim(),
-        phone: data.phone.trim(),
-        bio: data.bio?.trim(),
-        avatar: avatarFile || undefined,
-        avatarUrl: avatarPreview ?? undefined,
-      });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['me', 'profile'] });
-      onShowAlert({
-        type: 'success',
-        message: 'Profile Success Update',
-      });
-      onClose();
-    },
-    onError: (error: Error) => {
-      onShowAlert({
-        type: 'error',
-        message: error.message || 'Failed to update profile. Please try again.',
-      });
-    },
-  });
-
   const onSubmit = (data: EditProfileInput) => {
-    updateProfileMutation.mutate(data);
+    updateProfileMutation.mutate({
+      data,
+      avatarFile,
+      avatarPreview,
+    });
   };
 
   if (!isOpen) return null;

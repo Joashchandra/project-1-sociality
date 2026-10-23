@@ -1,30 +1,19 @@
 'use client';
 
-import { useState, useSyncExternalStore } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { meApi } from '@/services/me';
-import { MeApiResponse, MeStats, Post, User } from '@/types';
+import { useState } from 'react';
+import { Post } from '@/types';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { LayoutGrid, Bookmark, Send } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useSelector } from 'react-redux';
-import { RootState } from '@/store';
 import { CreatePostModal } from '@/components/shared/CreatePost';
 import { EditProfileModal } from '@/components/shared/EditProfile';
 import { Alert } from '@/components/shared/Alert';
-
-const subscribe = () => () => {};
-const getLocalStorageToken = () => localStorage.getItem('auth_token');
-const getServerToken = () => null;
-
-const emptySubscribe = () => () => {};
-const getClientTrue = () => true;
-const getServerFalse = () => false;
+import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { useMyPosts, useMyProfile, useMySaved } from '@/hooks/useMe';
 
 export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState<'gallery' | 'saved'>('gallery');
-
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [alertState, setAlertState] = useState<{
@@ -32,51 +21,17 @@ export default function ProfilePage() {
     message: string;
   } | null>(null);
 
-  const isMounted = useSyncExternalStore(
-    emptySubscribe,
-    getClientTrue,
-    getServerFalse
+  const { isMounted } = useCurrentUser();
+
+  const { profileData, statsData } = useMyProfile();
+  const { data: myPostsData, isLoading: isLoadingPosts } = useMyPosts(
+    { page: 1, limit: 20 },
+    activeTab === 'gallery'
   );
-
-  const { token, isAuthenticated } = useSelector(
-    (state: RootState) => state.auth
+  const { data: mySavedData, isLoading: isLoadingSaved } = useMySaved(
+    { page: 1, limit: 20 },
+    activeTab === 'saved'
   );
-
-  const storedToken = useSyncExternalStore(
-    subscribe,
-    getLocalStorageToken,
-    getServerToken
-  );
-
-  const isLoggedIn = isAuthenticated || Boolean(token) || Boolean(storedToken);
-
-  const { data: meResponse } = useQuery<MeApiResponse | User>({
-    queryKey: ['me', 'profile'],
-    queryFn: meApi.getProfile,
-    enabled: isLoggedIn && isMounted,
-  });
-
-  const profileData: User | undefined =
-    'data' in (meResponse || {})
-      ? (meResponse as MeApiResponse)?.data?.profile
-      : (meResponse as User);
-
-  const statsData: MeStats | undefined =
-    'data' in (meResponse || {})
-      ? (meResponse as MeApiResponse)?.data?.stats
-      : undefined;
-
-  const { data: myPostsData, isLoading: isLoadingPosts } = useQuery({
-    queryKey: ['me', 'posts'],
-    queryFn: () => meApi.getMyPosts({ page: 1, limit: 20 }),
-    enabled: isLoggedIn && isMounted && activeTab === 'gallery',
-  });
-
-  const { data: mySavedData, isLoading: isLoadingSaved } = useQuery({
-    queryKey: ['me', 'saved'],
-    queryFn: () => meApi.getMySaved({ page: 1, limit: 20 }),
-    enabled: isLoggedIn && isMounted && activeTab === 'saved',
-  });
 
   const handleShowAlert = (alert: {
     type: 'success' | 'error';
