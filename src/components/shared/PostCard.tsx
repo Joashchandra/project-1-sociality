@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { Post } from '@/types';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Heart, Bookmark, MessageCircle } from 'lucide-react';
 import dayjs from 'dayjs';
@@ -20,13 +20,20 @@ import { LikesModal } from './LikesModal';
 dayjs.extend(relativeTime);
 
 interface PostCardProps {
-  post: Post;
+  postId?: number;
+  post?: Post;
   onShowAlert?: (alert: { type: 'success' | 'error'; message: string }) => void;
 }
 
-export default function PostCard({ post, onShowAlert }: PostCardProps) {
+export default function PostCard({
+  postId: propPostId,
+  post: propPost,
+  onShowAlert,
+}: PostCardProps) {
   const queryClient = useQueryClient();
   const router = useRouter();
+
+  const targetPostId = propPostId ?? propPost?.id ?? 0;
 
   const [isCommentModalOpen, setIsCommentModalOpen] = useState(false);
   const [isLikesModalOpen, setIsLikesModalOpen] = useState(false);
@@ -42,21 +49,41 @@ export default function PostCard({ post, onShowAlert }: PostCardProps) {
     typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
   const isLoggedIn = isAuthenticated || Boolean(token) || Boolean(storedToken);
 
+  const { data: postDetailResponse, isLoading: isLoadingPost } = useQuery({
+    queryKey: ['post-detail', targetPostId],
+    queryFn: () => postsApi.getPostDetail(targetPostId),
+    enabled: Boolean(targetPostId),
+    initialData: propPost ? (propPost as unknown as Post) : undefined,
+  });
+
+  const rawPost =
+    (postDetailResponse as unknown as { data?: Post })?.data ??
+    (postDetailResponse as Post) ??
+    propPost;
+
   const { data: myLikesData } = useMyLikes({ page: 1, limit: 20 }, isLoggedIn);
   const { data: mySavedData } = useMySaved({ page: 1, limit: 20 }, isLoggedIn);
 
   const likesList = myLikesData?.data?.posts;
   const isLiked = Array.isArray(likesList)
-    ? likesList.some((likedPost: Post) => likedPost.id === post.id)
-    : (post.isLikedByMe ?? post.likedByMe ?? false);
+    ? likesList.some((likedPost: Post) => likedPost?.id === targetPostId)
+    : (rawPost?.isLikedByMe ?? rawPost?.likedByMe ?? false);
 
   const savedList = mySavedData?.data?.posts;
   const isSaved = Array.isArray(savedList)
-    ? savedList.some((savedPost: Post) => savedPost.id === post.id)
-    : (post.isSavedByMe ?? false);
+    ? savedList.some((savedPost: Post) => savedPost?.id === targetPostId)
+    : (rawPost?.isSavedByMe ?? false);
 
-  const likeCount = post._count?.likes ?? post.likeCount ?? 0;
-  const commentCount = post._count?.comments ?? post.commentCount ?? 0;
+  const likeCount = rawPost?._count?.likes ?? rawPost?.likeCount ?? 0;
+  const commentCount = rawPost?._count?.comments ?? rawPost?.commentCount ?? 0;
+
+  const author = rawPost?.author ??
+    (rawPost as unknown as { user?: Post['author'] })?.user ?? {
+      id: 0,
+      username: 'user',
+      name: 'User',
+      avatarUrl: null,
+    };
 
   const [isExpanded, setIsExpanded] = useState(false);
   const [isOverflowing, setIsOverflowing] = useState(false);
@@ -73,27 +100,37 @@ export default function PostCard({ post, onShowAlert }: PostCardProps) {
     checkOverflow();
     window.addEventListener('resize', checkOverflow);
     return () => window.removeEventListener('resize', checkOverflow);
-  }, [isExpanded, post.caption]);
+  }, [isExpanded, rawPost?.caption]);
 
   const likeMutation = useMutation({
     mutationFn: (currentlyLiked: boolean) =>
       currentlyLiked
-        ? postsApi.unlikePost(post.id)
-        : postsApi.likePost(post.id),
+        ? postsApi.unlikePost(targetPostId)
+        : postsApi.likePost(targetPostId),
     onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ['post-detail', targetPostId],
+      });
       queryClient.invalidateQueries({ queryKey: ['feed-infinite'] });
       queryClient.invalidateQueries({ queryKey: ['explore-feed-infinite'] });
       queryClient.invalidateQueries({ queryKey: ['me', 'likes'] });
+      queryClient.invalidateQueries({ queryKey: ['me', 'posts'] });
+      queryClient.invalidateQueries({ queryKey: ['me', 'saved'] });
+      queryClient.invalidateQueries({ queryKey: ['me', 'profile'] });
     },
   });
 
   const saveMutation = useMutation({
     mutationFn: (currentlySaved: boolean) =>
       currentlySaved
-        ? postsApi.unsavePost(post.id)
-        : postsApi.savePost(post.id),
+        ? postsApi.unsavePost(targetPostId)
+        : postsApi.savePost(targetPostId),
     onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ['post-detail', targetPostId],
+      });
       queryClient.invalidateQueries({ queryKey: ['me', 'saved'] });
+      queryClient.invalidateQueries({ queryKey: ['me', 'posts'] });
     },
   });
 
@@ -139,36 +176,53 @@ export default function PostCard({ post, onShowAlert }: PostCardProps) {
     saveMutation.mutate(isSaved);
   };
 
+  if (isLoadingPost && !rawPost) {
+    return (
+      <div className='flex flex-col rounded-lg text-neutral-25 overflow-hidden gap-2 w-full max-w-150 animate-pulse'>
+        <div className='flex items-center gap-2 lg:gap-3'>
+          <div className='h-11 w-11 rounded-full bg-neutral-900' />
+          <div className='space-y-1.5'>
+            <div className='h-3.5 w-28 bg-neutral-900 rounded' />
+            <div className='h-3 w-16 bg-neutral-900 rounded' />
+          </div>
+        </div>
+        <div className='aspect-square w-full bg-neutral-900 rounded-md' />
+      </div>
+    );
+  }
+
+  if (!rawPost) return null;
+
   return (
     <>
       <div className='flex flex-col rounded-lg text-neutral-25 overflow-hidden gap-2 w-full max-w-150'>
         <div className='flex items-center gap-2 lg:gap-3'>
-          <Link href={`/profile/${post.author.username}`}>
+          <Link href={`/profile/${author.username}`}>
             <Avatar className='h-11 w-11'>
-              <AvatarImage src={post.author.avatarUrl ?? undefined} />
-              <AvatarFallback>{post.author.name[0]}</AvatarFallback>
+              <AvatarImage src={author.avatarUrl ?? undefined} />
+              <AvatarFallback>{author.name?.[0] ?? 'U'}</AvatarFallback>
             </Avatar>
           </Link>
           <div>
             <Link
-              href={`/profile/${post.author.username}`}
+              href={`/profile/${author.username}`}
               className='text-sm font-bold text-neutral-25 hover:underline'
             >
-              {post.author.name}
+              {author.name}
             </Link>
             <p className='text-xs text-neutral-400'>
-              {dayjs(post.createdAt).fromNow()}
+              {dayjs(rawPost.createdAt).fromNow()}
             </p>
           </div>
         </div>
 
-        <div className='relative aspect-square w-full'>
+        <div className='relative aspect-square w-full bg-neutral-900 rounded-md overflow-hidden'>
           <Image
-            src={post.imageUrl}
+            src={rawPost.imageUrl}
             alt='Post image'
             fill
             unoptimized
-            className='rounded-md object-cover'
+            className='object-cover'
           />
         </div>
 
@@ -184,6 +238,7 @@ export default function PostCard({ post, onShowAlert }: PostCardProps) {
                 onTouchEnd={handleHoldEnd}
                 onClick={handleLikeClick}
                 className='focus:outline-none transition-transform active:scale-95 cursor-pointer'
+                aria-label='Like post (Hold to view likes)'
               >
                 <Heart
                   className={`h-6 w-6 ${
@@ -210,8 +265,10 @@ export default function PostCard({ post, onShowAlert }: PostCardProps) {
           </div>
 
           <button
+            type='button'
             onClick={handleSaveClick}
-            className='focus:outline-none transition-transform active:scale-95'
+            className='focus:outline-none transition-transform active:scale-95 cursor-pointer'
+            aria-label='Save post'
           >
             <Bookmark
               className={`h-6 w-6 text-neutral-25 ${
@@ -221,22 +278,23 @@ export default function PostCard({ post, onShowAlert }: PostCardProps) {
           </button>
         </div>
 
-        {post.caption && (
+        {rawPost.caption && (
           <div className='text-sm lg:text-md flex flex-col'>
             <Link
-              href={`/profile/${post.author.username}`}
+              href={`/profile/${author.username}`}
               className='font-bold hover:underline w-fit'
             >
-              {post.author.username}
+              {author.username}
             </Link>
             <p
               ref={textRef}
               className={`text-neutral-25 ${!isExpanded ? 'line-clamp-2' : ''}`}
             >
-              {post.caption}
+              {rawPost.caption}
             </p>
             {(isOverflowing || isExpanded) && (
               <button
+                type='button'
                 onClick={() => setIsExpanded(!isExpanded)}
                 className='font-bold text-primary-200 hover:brightness-125 text-left cursor-pointer'
               >
@@ -248,14 +306,14 @@ export default function PostCard({ post, onShowAlert }: PostCardProps) {
       </div>
 
       <CommentModal
-        post={post}
+        post={rawPost}
         isOpen={isCommentModalOpen}
         onClose={() => setIsCommentModalOpen(false)}
         onShowAlert={onShowAlert}
       />
 
       <LikesModal
-        postId={post.id}
+        postId={targetPostId}
         isOpen={isLikesModalOpen}
         onClose={() => setIsLikesModalOpen(false)}
         onShowAlert={onShowAlert}
