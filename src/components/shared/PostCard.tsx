@@ -53,7 +53,7 @@ export default function PostCard({
     queryKey: ['post-detail', targetPostId],
     queryFn: () => postsApi.getPostDetail(targetPostId),
     enabled: Boolean(targetPostId),
-    initialData: propPost ? (propPost as unknown as Post) : undefined,
+    placeholderData: propPost ? (propPost as unknown as Post) : undefined,
   });
 
   const rawPost =
@@ -102,21 +102,24 @@ export default function PostCard({
     return () => window.removeEventListener('resize', checkOverflow);
   }, [isExpanded, rawPost?.caption]);
 
+  const invalidateAllPostQueries = () => {
+    queryClient.invalidateQueries({ queryKey: ['post-detail', targetPostId] });
+    queryClient.invalidateQueries({ queryKey: ['feed-infinite'] });
+    queryClient.invalidateQueries({ queryKey: ['explore-feed-infinite'] });
+    queryClient.invalidateQueries({ queryKey: ['me', 'likes'] });
+    queryClient.invalidateQueries({ queryKey: ['me', 'posts'] });
+    queryClient.invalidateQueries({ queryKey: ['me', 'saved'] });
+    queryClient.invalidateQueries({ queryKey: ['me', 'profile'] });
+    queryClient.invalidateQueries({ queryKey: ['users'] });
+  };
+
   const likeMutation = useMutation({
     mutationFn: (currentlyLiked: boolean) =>
       currentlyLiked
         ? postsApi.unlikePost(targetPostId)
         : postsApi.likePost(targetPostId),
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ['post-detail', targetPostId],
-      });
-      queryClient.invalidateQueries({ queryKey: ['feed-infinite'] });
-      queryClient.invalidateQueries({ queryKey: ['explore-feed-infinite'] });
-      queryClient.invalidateQueries({ queryKey: ['me', 'likes'] });
-      queryClient.invalidateQueries({ queryKey: ['me', 'posts'] });
-      queryClient.invalidateQueries({ queryKey: ['me', 'saved'] });
-      queryClient.invalidateQueries({ queryKey: ['me', 'profile'] });
+      invalidateAllPostQueries();
     },
   });
 
@@ -126,11 +129,7 @@ export default function PostCard({
         ? postsApi.unsavePost(targetPostId)
         : postsApi.savePost(targetPostId),
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ['post-detail', targetPostId],
-      });
-      queryClient.invalidateQueries({ queryKey: ['me', 'saved'] });
-      queryClient.invalidateQueries({ queryKey: ['me', 'posts'] });
+      invalidateAllPostQueries();
     },
   });
 
