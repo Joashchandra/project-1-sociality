@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, FormEvent } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { Post, Comment } from '@/types';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import {
@@ -108,14 +109,6 @@ export function CommentModal({
     e.preventDefault();
     if (!text.trim()) return;
 
-    if (!isLoggedIn) {
-      onShowAlert?.({
-        type: 'error',
-        message: 'Please log in to leave a comment.',
-      });
-      return;
-    }
-
     addCommentMutation.mutate(
       { text: text.trim() },
       {
@@ -144,58 +137,76 @@ export function CommentModal({
     });
   };
 
-  const renderCommentForm = () => (
-    <form
-      onSubmit={handleSubmit}
-      className='relative border-t border-neutral-900 bg-neutral-950'
-    >
-      {showEmojiPicker && (
-        <div
-          ref={emojiPickerRef}
-          className='absolute bottom-16 left-3 z-50 grid grid-cols-6 p-4 gap-2.5 rounded-[12px] border border-neutral-900 bg-neutral-950'
-        >
-          {EMOJIS.map((emoji, i) => (
-            <button
-              key={i}
-              type='button'
-              onClick={() => handleSelectEmoji(emoji)}
-              className='flex h-6 w-6 items-center justify-center rounded-lg text-lg hover:bg-neutral-800 transition cursor-pointer'
+  const renderCommentForm = () => {
+    if (!isLoggedIn) {
+      return (
+        <div className='flex h-14 items-center border-t border-neutral-900 bg-neutral-950 px-4 text-center text-sm font-medium text-neutral-400 lg:text-md'>
+          <span>
+            <Link
+              href='/login'
+              className='text-primary-200 font-bold hover:underline cursor-pointer'
             >
-              {emoji}
-            </button>
-          ))}
+              log in
+            </Link>{' '}
+            to comment.
+          </span>
         </div>
-      )}
+      );
+    }
 
-      <div className='flex items-center gap-2 rounded-full'>
-        <button
-          type='button'
-          onClick={() => setShowEmojiPicker((prev) => !prev)}
-          className='flex items-center justify-center w-12 h-12 border border-neutral-900 text-neutral-400 hover:text-neutral-25 transition cursor-pointer shrink-0'
-          aria-label='Add emoji'
-        >
-          <Smile className='h-6 w-6' />
-        </button>
-        <div className='flex w-full gap-0.5 h-12 px-4 py-2 rounded-xl border border-neutral-900'>
-          <input
-            type='text'
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            placeholder='Add Comment'
-            className='flex w-full text-sm lg:text-md font-medium text-neutral-25 placeholder:text-neutral-600 focus:outline-none'
-          />
-
-          <button
-            type='submit'
-            disabled={!text.trim() || addCommentMutation.isPending}
-            className='text-sm font-bold text-primary-300 hover:text-primary-200 disabled:text-neutral-600 transition cursor-pointer px-2'
+    return (
+      <form
+        onSubmit={handleSubmit}
+        className='relative border-t border-neutral-900 bg-neutral-950'
+      >
+        {showEmojiPicker && (
+          <div
+            ref={emojiPickerRef}
+            className='absolute bottom-16 left-3 z-50 grid grid-cols-6 p-4 gap-2.5 rounded-[12px] border border-neutral-900 bg-neutral-950'
           >
-            {addCommentMutation.isPending ? 'Posting...' : 'Post'}
+            {EMOJIS.map((emoji, i) => (
+              <button
+                key={i}
+                type='button'
+                onClick={() => handleSelectEmoji(emoji)}
+                className='flex h-6 w-6 items-center justify-center rounded-lg text-lg hover:bg-neutral-800 transition cursor-pointer'
+              >
+                {emoji}
+              </button>
+            ))}
+          </div>
+        )}
+
+        <div className='flex items-center gap-2 rounded-full'>
+          <button
+            type='button'
+            onClick={() => setShowEmojiPicker((prev) => !prev)}
+            className='flex items-center justify-center w-12 h-12 border border-neutral-900 text-neutral-400 hover:text-neutral-25 transition cursor-pointer shrink-0'
+            aria-label='Add emoji'
+          >
+            <Smile className='h-6 w-6' />
           </button>
+          <div className='flex w-full gap-0.5 h-12 px-4 py-2 rounded-xl border border-neutral-900'>
+            <input
+              type='text'
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              placeholder='Add Comment'
+              className='flex w-full text-sm lg:text-md font-medium text-neutral-25 placeholder:text-neutral-600 focus:outline-none'
+            />
+
+            <button
+              type='submit'
+              disabled={!text.trim() || addCommentMutation.isPending}
+              className='text-sm font-bold text-primary-300 hover:text-primary-200 disabled:text-neutral-600 transition cursor-pointer px-2'
+            >
+              {addCommentMutation.isPending ? 'Posting...' : 'Post'}
+            </button>
+          </div>
         </div>
-      </div>
-    </form>
-  );
+      </form>
+    );
+  };
 
   return (
     <div className='fixed inset-0 z-50 flex lg:flex-col items-end lg:items-center justify-center bg-black/80 backdrop-blur-sm lg:mx-4'>
