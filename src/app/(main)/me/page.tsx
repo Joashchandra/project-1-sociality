@@ -1,10 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Post } from '@/types';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { LayoutGrid, Bookmark, Send, LogOut } from 'lucide-react';
-import Link from 'next/link';
+import { LayoutGrid, Bookmark, Send, LogOut, ArrowLeft } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useDispatch } from 'react-redux';
@@ -12,6 +11,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { logout } from '@/store/authSlice';
 import { CreatePostModal } from '@/components/shared/CreatePost';
 import { EditProfileModal } from '@/components/shared/EditProfile';
+import PostCard from '@/components/shared/PostCard';
 import { Alert } from '@/components/shared/Alert';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useMyPosts, useMyProfile, useMySaved } from '@/hooks/useMe';
@@ -23,13 +23,17 @@ export default function ProfilePage() {
   const queryClient = useQueryClient();
 
   const [activeTab, setActiveTab] = useState<'gallery' | 'saved'>('gallery');
+  const [selectedPostId, setSelectedPostId] = useState<number | null>(null);
+
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false); // 👈 Logout confirmation modal state
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const [alertState, setAlertState] = useState<{
     type: 'success' | 'error';
     message: string;
   } | null>(null);
+
+  const postRefs = useRef<Record<number, HTMLDivElement | null>>({});
 
   const { isMounted } = useCurrentUser();
 
@@ -59,14 +63,6 @@ export default function ProfilePage() {
     router.push('/login');
   };
 
-  if (!isMounted) {
-    return (
-      <div className='flex flex-col pt-4 gap-4 items-center w-full text-neutral-25'>
-        <div className='w-full h-40 bg-neutral-900 animate-pulse rounded-sm' />
-      </div>
-    );
-  }
-
   const postsList: Post[] =
     myPostsData?.data?.posts ?? myPostsData?.data?.items ?? [];
   const savedList: Post[] =
@@ -74,6 +70,23 @@ export default function ProfilePage() {
 
   const currentList: Post[] = activeTab === 'gallery' ? postsList : savedList;
   const isLoading = activeTab === 'gallery' ? isLoadingPosts : isLoadingSaved;
+
+  useEffect(() => {
+    if (selectedPostId !== null && postRefs.current[selectedPostId]) {
+      postRefs.current[selectedPostId]?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+      });
+    }
+  }, [selectedPostId]);
+
+  if (!isMounted) {
+    return (
+      <div className='flex flex-col pt-4 gap-4 items-center w-full text-neutral-25'>
+        <div className='w-full h-40 bg-neutral-900 animate-pulse rounded-sm' />
+      </div>
+    );
+  }
 
   return (
     <>
@@ -185,7 +198,10 @@ export default function ProfilePage() {
         <div className='flex flex-col w-full gap-6'>
           <div className='flex border-b border-neutral-900 w-full'>
             <button
-              onClick={() => setActiveTab('gallery')}
+              onClick={() => {
+                setActiveTab('gallery');
+                setSelectedPostId(null);
+              }}
               className={`flex items-center justify-center h-12 gap-2 flex-1 py-3 text-sm font-bold border-b-2 transition lg:text-md cursor-pointer ${
                 activeTab === 'gallery'
                   ? 'border-neutral-25 text-neutral-25'
@@ -197,7 +213,10 @@ export default function ProfilePage() {
             </button>
 
             <button
-              onClick={() => setActiveTab('saved')}
+              onClick={() => {
+                setActiveTab('saved');
+                setSelectedPostId(null);
+              }}
               className={`flex items-center justify-center gap-2 flex-1 py-3 text-sm font-semibold border-b-2 transition lg:text-md cursor-pointer ${
                 activeTab === 'saved'
                   ? 'border-neutral-25 text-neutral-25'
@@ -209,7 +228,34 @@ export default function ProfilePage() {
             </button>
           </div>
 
-          {isLoading ? (
+          {selectedPostId !== null ? (
+            <div className='flex flex-col items-center w-full gap-6 pb-12'>
+              <div className='sticky bg-black top-16 lg:top-20 z-30 flex items-center w-full py-3 px-4'>
+                <button
+                  type='button'
+                  onClick={() => setSelectedPostId(null)}
+                  className='flex items-center gap-2 text-sm font-bold text-neutral-25 hover:underline transition cursor-pointer lg:text-md'
+                >
+                  <ArrowLeft className='h-5 w-5' />
+                  Posts
+                </button>
+              </div>
+
+              <div className='flex flex-col items-center gap-8 w-full'>
+                {currentList.map((post) => (
+                  <div
+                    key={post.id}
+                    ref={(el) => {
+                      postRefs.current[post.id] = el;
+                    }}
+                    className='w-full flex justify-center'
+                  >
+                    <PostCard post={post} onShowAlert={handleShowAlert} />
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : isLoading ? (
             <div className='grid grid-cols-3 gap-1 md:gap-2 w-full'>
               {[...Array(6)].map((_, i) => (
                 <div
@@ -221,10 +267,11 @@ export default function ProfilePage() {
           ) : currentList.length > 0 ? (
             <div className='grid grid-cols-3 gap-1 md:gap-2 w-full'>
               {currentList.map((post: Post) => (
-                <Link
+                <button
+                  type='button'
                   key={post.id}
-                  href={`/posts/${post.id}`}
-                  className='relative aspect-square w-full overflow-hidden group bg-neutral-900 rounded-sm'
+                  onClick={() => setSelectedPostId(post.id)}
+                  className='relative aspect-square w-full overflow-hidden group bg-neutral-900 rounded-sm cursor-pointer'
                 >
                   <Image
                     src={post.imageUrl}
@@ -233,7 +280,7 @@ export default function ProfilePage() {
                     unoptimized
                     className='object-cover transition-transform duration-300 group-hover:scale-105'
                   />
-                </Link>
+                </button>
               ))}
             </div>
           ) : (
